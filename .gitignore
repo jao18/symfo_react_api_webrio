@@ -1,0 +1,31 @@
+# .DS_Store
+# .idea
+
+/var/
+/.env.local
+/.env.local.php
+/.env.*.local
+/public/bundles/
+/var/*
+/vendor/
+/api/config/packages/
+/react/node_modules/
+
+# Images
+public/images/*
+!public/images/.gitignore
+!/var/images
+
+###< symfony/framework-bundle ###
+
+###> phpstan/phpstan ###
+phpstan.neon
+###> friendsofphp/php-cs-fixer ###
+# /.php-cs-fixer.php
+# /.php-cs-fixer.cache
+
+
+###> lexik/jwt-authentication-bundle ###
+# /config/jwt/*.pem
+
+

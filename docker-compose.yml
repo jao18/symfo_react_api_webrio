@@ -1,0 +1,97 @@
+version: "3.7"
+
+services:
+  nginx:
+    build: docker/nginx
+    restart: on-failure
+    volumes:
+      # this will mount the api folder which contains the code to the docker container
+      - ./api:/var/www/api:delegated
+      # this will mount the nginx logs so that you can check the logs for errors,
+      # without logging into the container
+      - ./var/logs/nginx/:/var/log/nginx:delegated
+      # this will create the server config to serve the api
+      - ./docker/nginx/api.conf:/etc/nginx/conf.d/api.conf:delegated
+    ports:
+      - "90:80"
+    networks:
+      - api_symfo_app
+
+#  db2:
+#    image: ibmcom/db2:latest
+#    container_name: db2server
+#    platform: linux/x86_64
+#    privileged: true
+#    user: "0"
+#    command: bash -c "su – db2inst1"
+#    environment:
+#      - LICENSE=accept
+#      - DB2INSTANCE=db2inst1
+#      - DB2INST1_PASSWORD=admin
+#      - DBNAME=mydb2
+#      - TO_CREATE_SAMPLEDB=true
+#      - ENABLE_ORACLE_COMPATIBILITY=false
+#      - UPDATEAVAIL=NO
+#      - IS_OSXFS=false
+#      - REPODB=false
+#      - PERSISTENT_HOME=true
+#    volumes:
+#      - ./database:/database
+#    ports:
+#      - "50000:50000"
+
+  api:
+    build: docker/php
+    restart: on-failure
+    depends_on:
+      - nginx
+    volumes:
+      # this will mount the api folder which contains the code to the docker container
+      - ./api:/var/www/api:cached
+    ports:
+      - "9000:9000"
+    networks:
+      - api_symfo_app
+
+  react:
+    build: ./react
+    restart: on-failure
+    # this command will copy the node_modules from the cache directory into the mounted app directory (node_modules will appear on the host machine)
+    # and start the project
+    command: sh -c "rsync -arv /usr/src/cache/node_modules/. /usr/src/app/node_modules && npm start"
+    depends_on:
+      - api
+    volumes:
+      # this will mount the node folder which contains the code to the docker container
+      - ./react:/usr/src/app:delegated
+    ports:
+      - "4000:3000"
+    networks:
+      - api_symfo_app
+
+  database:
+    image: mariadb:${MARIADB_VERSION:-10.5}
+    depends_on:
+      - api
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-api}
+      # You should definitely change the password in production
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-!ChangeMe!}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-!ChangeMe!}
+    volumes:
+      - database_data:/var/lib/mysql:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/mysql:rw
+    ports:
+      - "3307:3306"
+    networks:
+      - api_symfo_app
+
+volumes:
+  symfony_app_var:
+  symfony_app_vendor:
+  database_data:
+
+networks:
+  api_symfo_app:
